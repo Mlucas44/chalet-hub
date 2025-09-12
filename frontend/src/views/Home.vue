@@ -8,7 +8,7 @@
     <ul v-if="!loading && !error">
       <li v-for="c in chalets" :key="c.id">
         <strong>{{ c.name }}</strong> — {{ c.location }} — {{ c.pricePerNight }} $/nuit
-        <!-- plus tard : <router-link :to="`/chalet/${c.id}`">Voir</router-link> -->
+        <router-link :to="`/chalet/${c.id}`"><strong>{{ c.name }}</strong></router-link>
       </li>
     </ul>
 
