@@ -29,6 +29,16 @@ public class ChaletController {
     return repo.findAll();
   }
 
+  @Operation(summary = "Détail d’un chalet", description = "Récupère un chalet par son identifiant.")
+  @ApiResponse(responseCode = "200", description = "Trouvé")
+  @ApiResponse(responseCode = "404", description = "Non trouvé")
+  @GetMapping("/{id}")
+  public ResponseEntity<Chalet> getOne(@PathVariable Long id) {
+    return repo.findById(id)
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
+  }
+
   @Operation(summary = "Créer un nouveau chalet", description = "Ajoute un chalet dans la base. "
       + "Cette route est ouverte pour le moment (dev), mais sera réservée aux admins/hosts.")
   @ApiResponse(responseCode = "200", description = "Chalet créé avec succès")
