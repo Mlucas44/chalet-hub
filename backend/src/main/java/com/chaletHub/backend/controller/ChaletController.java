@@ -2,14 +2,21 @@ package com.chaletHub.backend.controller;
 
 import com.chaletHub.backend.model.Chalet;
 import com.chaletHub.backend.repository.ChaletRepository;
+import com.chaletHub.backend.repository.ChaletSpecs;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/chalets")
@@ -50,26 +57,40 @@ public class ChaletController {
     return repo.save(chalet);
   }
 
-  @Operation(summary = "Lister les chalets (paginé + filtres)")
-  @ApiResponse(responseCode = "200", description = "OK")
+  // --- Recherche paginée/tri/filtre ---
+  private static final Set<String> ALLOWED_SORT = Set.of("id", "name", "pricePerNight");
+
+  @Operation(summary = "Recherche paginée avec filtres")
+  @ApiResponse(responseCode = "200")
   @GetMapping("/search")
-  public ResponseEntity<Page<Chalet>> search(
-      @RequestParam(required = false) String location,
-      @RequestParam(required = false) Double minPrice,
-      @RequestParam(required = false) Double maxPrice,
+  public Page<Chalet> search(
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) String city,
+      @RequestParam(required = false) BigDecimal minPrice,
+      @RequestParam(required = false) BigDecimal maxPrice,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "id,desc") String sort) {
+    // sort="field,dir"
     String[] parts = sort.split(",", 2);
-    Sort s = Sort.by(Sort.Direction.fromString(parts.length > 1 ? parts[1] : "desc"), parts[0]);
+    String field = parts[0].trim();
+    String dir = parts.length > 1 ? parts[1].trim() : "asc";
 
-    Pageable pageable = PageRequest.of(page, size, s);
+    if (!ALLOWED_SORT.contains(field)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Invalid sort field. Allowed: " + ALLOWED_SORT);
+    }
 
-    Page<Chalet> result = repo.findAll(pageable)
-        .map(c -> c);
+    Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+    Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(direction, field));
 
-    result = repo.search(location, minPrice, maxPrice, pageable);
+    Specification<Chalet> spec = Specification
+        .where(ChaletSpecs.textSearch(q))
+        .and(ChaletSpecs.locationLike(city))
+        .and(ChaletSpecs.priceMin(minPrice))
+        .and(ChaletSpecs.priceMax(maxPrice));
 
-    return ResponseEntity.ok(result);
+    return repo.findAll(spec, pageable);
   }
+
 }

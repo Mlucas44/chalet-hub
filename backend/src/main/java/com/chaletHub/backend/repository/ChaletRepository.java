@@ -5,8 +5,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-public interface ChaletRepository extends JpaRepository<Chalet, Long> {
+public interface ChaletRepository extends JpaRepository<Chalet, Long>, JpaSpecificationExecutor<Chalet> {
 
   @Query("""
         select c from Chalet c
